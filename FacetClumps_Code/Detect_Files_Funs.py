@@ -27,11 +27,18 @@ def Change_pix2word(data_wcs, outcat, ndim):
         clustSize = np.column_stack([size1, size2])
     elif ndim == 3:
         # 3d result
-        peak1, peak2, peak3 = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], outcat['Peak3'], 1)
-        clump_Peak = np.column_stack([peak1, peak2, peak3 / 1000])
-        cen1, cen2, cen3 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], outcat['Cen3'], 1)
-        clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
-        clustSize = np.column_stack([size1, size2, outcat['Size3']])
+        if data_wcs.world_n_dim == 3:
+            peak1, peak2, peak3 = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], outcat['Peak3'], 1)
+            clump_Peak = np.column_stack([peak1, peak2, peak3 / 1000])
+            cen1, cen2, cen3 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], outcat['Cen3'], 1)
+            clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
+            clustSize = np.column_stack([size1, size2, outcat['Size3']])
+        elif data_wcs.world_n_dim == 4:
+            peak1, peak2, peak3, temp_p = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], outcat['Peak3'], 1, 1)
+            clump_Peak = np.column_stack([peak1, peak2, peak3 / 1000])
+            cen1, cen2, cen3, temp_c = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], outcat['Cen3'], 1, 1)
+            clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
+            clustSize = np.column_stack([size1, size2, outcat['Size3']])
     id_clumps = np.arange(1, len(clustPeak) + 1, 1)
     outcat_wcs = np.column_stack((id_clumps, clump_Peak, clump_Cen, clustSize, clustPeak,
                                   clustSum, clustVolume, clustAngle, clustEdge))
