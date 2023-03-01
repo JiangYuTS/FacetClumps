@@ -94,7 +94,7 @@ def Table_Interface(did_table, data_wcs, ndim):
         units = [None,'pix','pix','pix','pix','pix','pix','pix','pix','pix','K','K','pix','deg',None]
         dtype = ['int','int','int','int','float32','float32','float32','float32','float32',
                  'float32','float32','float32','int','int8','int8']
-        units_wcs = [None,'deg','deg','deg','deg','deg','deg','pix','pix','pix','K','K','pix','deg',None]
+        units_wcs = [None,'deg','deg','km/s','deg','deg','km/s','pix','pix','pix','K','K','pix','deg',None]
         dtype_wcs = ['int','float32','float32','float32','float32','float32','float32',
                      'float32','float32','float32','float32','float32','int','int8','int8']
         td_outcat = Table(d_outcat,names = columns,dtype=dtype,units=units)
