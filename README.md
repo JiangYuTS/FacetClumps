@@ -1,5 +1,5 @@
 # FacetClumps
-FacetClumps: A molecular clump detection algorithm based on Facet model
+FacetClumps: A Facet-based Molecular Clump Detection Algorithm
 
 FacetClumps is a Python package for extraction and analysis of clumpy structure in molecular clouds. 
 
