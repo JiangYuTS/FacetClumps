@@ -151,6 +151,7 @@ def Get_COM(origin_data,regions_record):
             od_mass = origin_data[x_region,y_region]
             center_of_mass.append(np.around((np.c_[od_mass,od_mass]*final_region).sum(0)\
                 /od_mass.sum(),3).tolist())
+    center_of_mass = np.array(center_of_mass)
     return center_of_mass
 
 def Get_Total_COM(origin_data,regions,convs,kbins,SRecursionLB):
@@ -166,8 +167,6 @@ def Get_Total_COM(origin_data,regions,convs,kbins,SRecursionLB):
         eigenvalue = Calculate_Eig(origin_data,convs,region)
         regions_record = Recursion_Lable(origin_data,convs,region,regions_record,eigenvalue,lnV,logV,bins,keig_bins,SRecursionLB,recursion_time)
     com = Get_COM(origin_data,regions_record)
-    sorted_id_com = sorted(range(len(com)), key=lambda k: com[k], reverse=False)
-    com = (np.array(com)[sorted_id_com])
     return com
 
 def GNC_FacetClumps(core_data,cores_coordinate):
@@ -188,7 +187,6 @@ def Build_RC_Dict(com,regions_array,regions_first):
     k1 = 0
     k2 = 0
     i_record = []
-    items = []
     temp_rc_dict = {}
     rc_dict = {}
     new_regions = []
@@ -210,7 +208,7 @@ def Build_RC_Dict(com,regions_array,regions_first):
             k2 += 1
     return new_regions,temp_regions_array,rc_dict
 
-def Build_MPR_Dict(core_data,regions):
+def Build_MPR_Dict(origin_data,regions):
     k = 1
     reg = -1
     peak_dict = {}
@@ -218,10 +216,10 @@ def Build_MPR_Dict(core_data,regions):
     mountain_dict = {}
     mountain_dict[k] = []
     region_mp_dict = {}
-    mountain_array = np.zeros_like(core_data)
-    peak_array = np.zeros_like(core_data)
-    temp_core_data = np.zeros(tuple(np.array(core_data.shape)+2))
-    temp_core_data[1:temp_core_data.shape[0]-1,1:temp_core_data.shape[1]-1]=core_data
+    origin_data = origin_data + np.random.random(origin_data.shape) / 100000
+    mountain_array = np.zeros_like(origin_data)
+    temp_origin_data = np.zeros(tuple(np.array(origin_data.shape)+2))
+    temp_origin_data[1:temp_origin_data.shape[0]-1,1:temp_origin_data.shape[1]-1]=origin_data
     for i in range(len(regions)):
         region_mp_dict[i] = []
     for region in tqdm(regions):
@@ -232,12 +230,12 @@ def Build_MPR_Dict(core_data,regions):
             if mountain_array[coordinates[i][0],coordinates[i][1]] == 0:
                 temp_coords.append(coordinates[i].tolist())
                 mountain_array[coordinates[i][0],coordinates[i][1]] = k
-                gradients,new_center = GNC_FacetClumps(temp_core_data,coordinates[i])
+                gradients,new_center = GNC_FacetClumps(temp_origin_data,coordinates[i])
                 if gradients.max() > 0 and mountain_array[new_center[0],new_center[1]] == 0:
                     temp_coords.append(new_center)
                 while gradients.max() > 0 and mountain_array[new_center[0],new_center[1]] == 0:
                     mountain_array[new_center[0],new_center[1]] = k
-                    gradients,new_center = GNC_FacetClumps(temp_core_data,new_center)
+                    gradients,new_center = GNC_FacetClumps(temp_origin_data,new_center)
                     if gradients.max() > 0 and mountain_array[new_center[0],new_center[1]] == 0:
                         temp_coords.append(new_center)
                 mountain_array[np.stack(temp_coords)[:,0],np.stack(temp_coords)[:,1]]=\
