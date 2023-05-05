@@ -18,5 +18,5 @@ if __name__ == '__main__':
     SRecursionLB = SRecursionLBV[0]
     did_FacetClumps = Detect_FacetClumps_2D(RMS,Threshold,SWindow,KBins,SRecursionLB,origin_data)
     #3D
-    did_FacetClumps = Detect_FacetClumps_3D(RMS,Threshold,SWindow,KBins,SRecursionLBV, origin_data)
+    did_FacetClumps = Detect_FacetClumps_3D(RMS,Threshold,SWindow,KBins,FwhmBeam,VeloRes,SRecursionLBV,origin_data)
 
