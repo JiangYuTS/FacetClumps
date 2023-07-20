@@ -8,7 +8,7 @@ FacetClumps is a Python package for extraction and analysis of clumpy structure 
 
 We sincerely welcome community contributions to its optimization. If you find an issue with the code, or would like to request additional features, please raise an issue in the repository or send me an email. Email: yujiang@pmo.ac.cn
 
-If you use FacetClumps in a publication, please cite the article [Jiang Yu et al.](https://ui.adsabs.harvard.edu/abs/2023arXiv230518709J/abstract) and the [Software] (https://ascl.net/2306.038) in Astrophysics Source Code Library(ASCL).
+If you use FacetClumps in a publication, please cite the article [Jiang Yu et al.](https://ui.adsabs.harvard.edu/abs/2023arXiv230518709J/abstract) and the [Software](https://ascl.net/2306.038) in Astrophysics Source Code Library (ASCL).
 
 #### Direction for usage
 
