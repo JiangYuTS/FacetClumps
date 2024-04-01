@@ -13229,7 +13229,7 @@ div#notebook {
 <div class="prompt input_prompt">In&nbsp;[3]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># pip install FacetClumps==0.0.4</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># pip install FacetClumps==0.0.6</span>
 
 <span class="kn">import</span> <span class="nn">FacetClumps</span>
 <span class="kn">from</span> <span class="nn">FacetClumps.Detect_Files</span> <span class="kn">import</span> <span class="n">Detect</span> <span class="k">as</span> <span class="n">DF_FacetClumps</span>
@@ -13379,6 +13379,8 @@ div#notebook {
 <span class="n">FwhmBeam</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">VeloRes</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">SRecursionLBV</span> <span class="o">=</span> <span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span> <span class="c1"># [(2+FwhmBeam)**2,3+VeloRes]</span>
+
+<span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span><span class="n">RMS</span><span class="p">,</span> <span class="n">Threshold</span><span class="p">,</span> <span class="n">SWindow</span><span class="p">,</span> <span class="n">KBins</span><span class="p">,</span> <span class="n">FwhmBeam</span><span class="p">,</span> <span class="n">VeloRes</span><span class="p">,</span> <span class="n">SRecursionLBV</span><span class="p">]</span>
 
 <span class="n">SRecursionLB</span> <span class="o">=</span> <span class="n">SRecursionLBV</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">did_FacetClumps</span> <span class="o">=</span> <span class="n">FacetClumps</span><span class="o">.</span><span class="n">FacetClumps_2D_Funs</span><span class="o">.</span><span class="n">Detect_FacetClumps</span><span class="p">(</span><span class="n">RMS</span><span class="p">,</span> <span class="n">Threshold</span><span class="p">,</span> <span class="n">SWindow</span><span class="p">,</span> <span class="n">KBins</span><span class="p">,</span><span class="n">SRecursionLB</span><span class="p">,</span><span class="n">example_data_C18O</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
