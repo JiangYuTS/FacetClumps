@@ -7,6 +7,7 @@ from astropy.table import Table
 
 from FacetClumps import Detect_FacetClumps
 
+
 def Change_pix2word(data_header, outcat, ndim):
     """
     :param data_wcs: file header.
@@ -21,36 +22,67 @@ def Change_pix2word(data_header, outcat, ndim):
     clump_Volume = outcat['Volume']
     clump_Angle = outcat['Angle']
     clump_Edge = outcat['Edge']
-    size1, size2 = np.array([outcat['Size1'] * np.abs(data_header['CDELT1']) * 3600,
-                             outcat['Size2'] * np.abs(data_header['CDELT2']) * 3600])
+    if 'CDELT1' in data_header and 'CDELT2' in data_header:
+        size1, size2 = np.array([outcat['Size1'] * np.abs(data_header['CDELT1']) * 3600,
+                                 outcat['Size2'] * np.abs(data_header['CDELT2']) * 3600])
+    else:
+        size1, size2 = np.array([outcat['Size1'], outcat['Size2']])
+        print('The size has not converted to WCS!')
+        print('You need to transform the WCS table through the Pix table by yourself.')
     if ndim == 2:
-        # 2d result
+        # 2D result
         clump_Sum = outcat['Sum']
-        peak1, peak2 = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], 1)
+        if data_wcs.world_n_dim == 2:
+            peak1, peak2 = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], 1)
+            cen1, cen2 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], 1)
+        elif data_wcs.world_n_dim == 3:
+            peak1, peak2, temp_value = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], 1, 1)
+            cen1, cen2, temp_value = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], 1, 1)
+        else:
+            print('The data_wcs.world_n_dim is unexpected!')
         clump_Peaks = np.column_stack([peak1, peak2])
-        cen1, cen2 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], 1)
         clump_Cen = np.column_stack([cen1, cen2])
         clump_Size = np.column_stack([size1, size2])
     elif ndim == 3:
-        # 3d result
+        # 3D result
         if data_wcs.world_n_dim == 3:
             peak1, peak2, peak3 = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], outcat['Peak3'], 1)
-            clump_Peaks = np.column_stack([peak1, peak2, peak3 / 1000])
             cen1, cen2, cen3 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], outcat['Cen3'], 1)
-            clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
         elif data_wcs.world_n_dim == 4:
             peak1, peak2, peak3, temp_p = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], outcat['Peak3'], 1,
                                                                  1)
-            clump_Peaks = np.column_stack([peak1, peak2, peak3 / 1000])
             cen1, cen2, cen3, temp_c = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], outcat['Cen3'], 1, 1)
-            clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
-        clump_Size = np.column_stack([size1, size2, outcat['Size3'] * data_header['CDELT3'] / 1000])
-        clump_Sum = outcat['Sum'] * data_header['CDELT3'] / 1000
+        else:
+            print('The data_wcs.world_n_dim is unexpected!')
+        if 'CDELT3' in data_header:
+            if data_header['CUNIT3'] == 'm/s' or data_header['CUNIT3'] == 'm s-1':
+                clump_Peaks = np.column_stack([peak1, peak2, peak3 / 1000])
+                clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
+                clump_Size = np.column_stack([size1, size2, outcat['Size3'] * data_header['CDELT3'] / 1000])
+                clump_Sum = outcat['Sum'] * data_header['CDELT3'] / 1000
+            elif data_header['CUNIT3'] == 'km/s' or data_header['CUNIT3'] == 'km s-1':
+                clump_Peaks = np.column_stack([peak1, peak2, peak3])
+                clump_Cen = np.column_stack([cen1, cen2, cen3])
+                clump_Size = np.column_stack([size1, size2, outcat['Size3'] * data_header['CDELT3']])
+                clump_Sum = outcat['Sum'] * data_header['CDELT3']
+            else:
+                print('Please cheek the unit of the velocity channels (str: km/s, m/s, m s-1, km s-1, or else).')
+                print('You need to transform the WCS table through the Pix table by yourself.')
+                clump_Peaks = np.column_stack([peak1, peak2, peak3])
+                clump_Cen = np.column_stack([cen1, cen2, cen3])
+                clump_Size = np.column_stack([size1, size2, outcat['Size3']])
+                clump_Sum = outcat['Sum']
+        else:
+            print('Please cheek the key world of the velocity channels (CDELT3, or else).')
+            print('You need to transform the WCS table through the Pix table by yourself.')
+            clump_Peaks = np.column_stack([peak1, peak2, peak3])
+            clump_Cen = np.column_stack([cen1, cen2, cen3])
+            clump_Size = np.column_stack([size1, size2, outcat['Size3']])
+            clump_Sum = outcat['Sum']
     id_clumps = np.arange(1, len(clump_Peak) + 1, 1)
     outcat_wcs = np.column_stack((id_clumps, clump_Peaks, clump_Cen, clump_Size, clump_Peak,
                                   clump_Sum, clump_Volume, clump_Angle, clump_Edge))
     return outcat_wcs
-
 
 def Table_Interface(did_table, data_header, ndim):
     """
@@ -145,7 +177,7 @@ def Detect(file_name, parameters, mask_name, outcat_name, outcat_wcs_name):
     else:
         raise Exception('Please check the dimensionality of the data!')
     if len(did_table['peak_value']) != 0:
-        np.savez(outcat_name[:-4] + '_FacetClumps_npz', did_FacetClumps=did_table)
+        # np.savez(outcat_name[:-4] + '_FacetClumps_npz', did_FacetClumps=did_table)
         regions_data = did_table['regions_data']
         fits.writeto(mask_name, regions_data, overwrite=True)
         data_header = fits.getheader(file_name)
