@@ -47,7 +47,7 @@ def Get_Regions_FacetClumps(origin_data,RMS=0.1,threshold='otsu',temp_array=None
     return regions,regions_array
 
 def Convolve(origin_data,SWindow):
-    s = np.int(SWindow/2)
+    s = np.int64(SWindow/2)
     L = 0
     xres, yres, zres = np.mgrid[0:SWindow:1,0:SWindow:1,0:SWindow:1]
     xyz = np.column_stack([xres.flat, yres.flat, zres.flat])
@@ -216,7 +216,7 @@ def Get_Total_COM(origin_data,regions,convs,kbins,SRecursionLBV):
     for i in tqdm(range(len(regions))):
         coords = regions[i].coords
         region = np.c_[coords[:,0],coords[:,1],coords[:,2]]
-        lnV = np.int(np.log(len(coords)))
+        lnV = np.int64(np.log(len(coords)))
         logV = np.log10(len(coords))
         bins = kbins*lnV
         eigenvalue = Calculate_Eig(origin_data,convs,region)
@@ -248,7 +248,7 @@ def Build_RC_Dict(com,regions_array,regions_first):
     rc_dict = {}
     new_regions = []
     temp_regions_array = np.zeros_like(regions_array)
-    for i in range(1,np.int(regions_array.max()+1)):
+    for i in range(1,np.int64(regions_array.max()+1)):
         temp_rc_dict[i] = []
     center = np.array(np.around(com,0),dtype = 'uint16')
     for cent in center:
@@ -256,7 +256,7 @@ def Build_RC_Dict(com,regions_array,regions_first):
             temp_rc_dict[regions_array[cent[0],cent[1],cent[2]]].append(com[k1])
             i_record.append(regions_array[cent[0],cent[1],cent[2]])
         k1 += 1
-    for i in range(1,np.int(regions_array.max())+1):
+    for i in range(1,np.int64(regions_array.max())+1):
         if i in i_record:
             coordinates = regions_first[i-1].coords
             temp_regions_array[(coordinates[:,0],coordinates[:,1],coordinates[:,2])] = 1
@@ -344,11 +344,11 @@ def Connectivity_FacetClumps(core_dict_1,core_dict_2,i_num,j_num):
     box_region = measure.regionprops(box_label)
     return len(box_region)
 
-def Delect(FwhmBeam,VeloRes,new_peak_dict,new_core_dict,peak_dict_center,core_dict_center,key_peak_record,near_k_2,origin_data):
+def Delect(FwhmBeam,VeloRes,new_peak_dict,new_core_dict,com_dict,core_dict_center,key_peak_record,near_k_2,origin_data):
     for key_peak in key_peak_record:
-        dist = Dists_Array_Weighted(FwhmBeam,VeloRes,[new_peak_dict[key_peak]], list(peak_dict_center.values()))
+        dist = Dists_Array_Weighted(FwhmBeam,VeloRes,[new_peak_dict[key_peak]], list(com_dict.values()))
         dist_index_sort = np.argsort(dist[0])
-        pdc_sort = np.array(list(peak_dict_center.keys()))[dist_index_sort]
+        pdc_sort = np.array(list(com_dict.keys()))[dist_index_sort]
         i_num = key_peak
         for key_center in pdc_sort[:near_k_2]:
             j_num = key_center
@@ -359,56 +359,56 @@ def Delect(FwhmBeam,VeloRes,new_peak_dict,new_core_dict,peak_dict_center,core_di
                 del new_peak_dict[key_peak]
                 break
 
-def Update_CP_Dict_FacetClumps(FwhmBeam,VeloRes,new_peak_dict,peak_dict_center,new_core_dict,mountain_array,origin_data):
-    peak_dict_temp = {}
+def Update_CP_Dict_FacetClumps(FwhmBeam,VeloRes,new_peak_dict,com_dict,new_core_dict,mountain_array,origin_data):
+    com_dict_temp = {}
     core_dict_center = {}
     key_mountain_record = []
     center_mountain = {}
     new_peak_dict_2 = {}
     for key in new_peak_dict.keys():
         new_peak_dict_2[key] = new_peak_dict[key]
-    for key_center in peak_dict_center.keys():
-        peak_coord = peak_dict_center[key_center]
-        peak_coord = np.array(np.around(peak_coord,0),dtype = 'uint16')
-        if mountain_array[peak_coord[0],peak_coord[1],peak_coord[2]]!=0:
-            key_mountain = mountain_array[peak_coord[0],peak_coord[1],peak_coord[2]]
+    for key_center in com_dict.keys():
+        com_coord = com_dict[key_center]
+        com_coord = np.array(np.around(com_coord,0),dtype = 'uint16')
+        if mountain_array[com_coord[0],com_coord[1],com_coord[2]]!=0:
+            key_mountain = mountain_array[com_coord[0],com_coord[1],com_coord[2]]
         if key_mountain not in key_mountain_record:
-            peak_dict_temp[key_center] = peak_dict_center[key_center]
+            com_dict_temp[key_center] = com_dict[key_center]
             core_dict_center[key_center] = new_core_dict[key_mountain]
             center_mountain[key_mountain] = key_center
             key_mountain_record.append(key_mountain)
             del new_core_dict[key_mountain]
             del new_peak_dict[key_mountain]
         else:
-            old_center = peak_dict_temp[center_mountain[key_mountain]]
-            new_center = peak_dict_center[key_center]
+            old_center = com_dict_temp[center_mountain[key_mountain]]
+            new_center = com_dict[key_center]
             dist_1 = Dists_Array_Weighted(FwhmBeam,VeloRes,[old_center], [new_peak_dict_2[key_mountain]])[0][0]
             dist_2 = Dists_Array_Weighted(FwhmBeam,VeloRes,[new_center], [new_peak_dict_2[key_mountain]])[0][0]
             if dist_2<dist_1:
-                peak_dict_temp[center_mountain[key_mountain]] = peak_dict_center[key_center]
-    peak_dict_center = peak_dict_temp
+                com_dict_temp[center_mountain[key_mountain]] = com_dict[key_center]
+    com_dict = com_dict_temp
     near_k_1 = 1
     near_k_2 = 1
     while len(new_core_dict)>0:
-        if len(new_core_dict)>len(peak_dict_center.keys()):
-            for key_center in peak_dict_center.keys():
+        if len(new_core_dict)>len(com_dict.keys()):
+            for key_center in com_dict.keys():
                 if len(new_core_dict)>0:
-                    distance = Dists_Array_Weighted(FwhmBeam,VeloRes,[peak_dict_center[key_center]], list(new_peak_dict.values()))
+                    distance = Dists_Array_Weighted(FwhmBeam,VeloRes,[com_dict[key_center]], list(new_peak_dict.values()))
                     distance_index_sort = np.argsort(distance[0])
                     npd_sort = np.array(list(new_peak_dict.keys()))[distance_index_sort]
                     key_peak_record = npd_sort[:near_k_2]
-                    Delect(FwhmBeam,VeloRes,new_peak_dict,new_core_dict,peak_dict_center,core_dict_center,key_peak_record,near_k_2,origin_data)
+                    Delect(FwhmBeam,VeloRes,new_peak_dict,new_core_dict,com_dict,core_dict_center,key_peak_record,near_k_2,origin_data)
         else:
             key_peak_record = np.array(list(new_peak_dict.keys()))
-            Delect(FwhmBeam,VeloRes,new_peak_dict,new_core_dict,peak_dict_center,core_dict_center,key_peak_record,near_k_1,origin_data)
+            Delect(FwhmBeam,VeloRes,new_peak_dict,new_core_dict,com_dict,core_dict_center,key_peak_record,near_k_1,origin_data)
         temp_near_k = near_k_2
         near_k_2 = near_k_1
         near_k_1 += temp_near_k
-    return peak_dict_temp,core_dict_center
+    return com_dict_temp,core_dict_center
 
 def Get_CP_Dict(FwhmBeam,VeloRes,rc_dict,mountain_array,mountain_dict,peak_dict,region_mp_dict,origin_data):
     core_id = 0
-    peak_dict_record = {}
+    com_dict_record = {}
     core_dict_record = {}
     for key in tqdm(np.array(list(rc_dict.keys()))):
         new_peak_dict = {}
@@ -422,12 +422,12 @@ def Get_CP_Dict(FwhmBeam,VeloRes,rc_dict,mountain_array,mountain_dict,peak_dict,
         for com_FacetClumps in com_FacetClumpss:
             peak_dict_center[core_id] = com_FacetClumps.tolist()
             core_id += 1
-        peak_dict_temp,core_dict_center = \
+        com_dict_temp,core_dict_center = \
             Update_CP_Dict_FacetClumps(FwhmBeam,VeloRes,new_peak_dict,peak_dict_center,new_core_dict,mountain_array,origin_data)
         for key_center in core_dict_center.keys():
-            peak_dict_record[key_center] = peak_dict_temp[key_center]
+            com_dict_record[key_center] = com_dict_temp[key_center]
             core_dict_record[key_center] = core_dict_center[key_center]
-    return peak_dict_record,core_dict_record
+    return com_dict_record,core_dict_record
 
 def Get_DV(box_data,box_center):
     box_data_sum = box_data.sum(0)
@@ -459,12 +459,12 @@ def DID_FacetClumps(SRecursionLBV,center_dict,core_dict,origin_data):
     clump_size = []
     clump_sum = []
     clump_volume = []
-    clump_regions = []
     clump_edge = []
     clump_angle = []
     detect_infor_dict = {}
     k = 0
     regions_data = np.zeros_like(origin_data)
+    data_size = origin_data.shape
     for key in center_dict.keys():
         core_x = np.array(core_dict[key])[:,0]
         core_y = np.array(core_dict[key])[:,1]
@@ -496,8 +496,6 @@ def DID_FacetClumps(SRecursionLBV,center_dict,core_dict,origin_data):
             clump_volume.append(len(core_dict[key]))
             clump_angle.append(angle)
             regions_data[core_x,core_y,core_z] = k
-            clump_regions.append([np.array(core_dict[key])[:,0],np.array(core_dict[key])[:,1],np.array(core_dict[key])[:,2]])
-            data_size = origin_data.shape
             if core_x_min == 0 or core_y_min == 0 or core_z_min == 0 or \
                 core_x_max+1 == data_size[0] or core_y_max+1 == data_size[1] or core_z_max+1 == data_size[2]:
                 clump_edge.append(1)
@@ -528,6 +526,8 @@ def Detect_FacetClumps(RMS,Threshold,SWindow,KBins,FwhmBeam,VeloRes,SRecursionLB
     new_regions_2,regions_array_2,rc_dict = Build_RC_Dict(com,regions_array_2,regions_2)
     mountain_array,mountain_dict,peak_dict,region_mp_dict = Build_MPR_Dict(origin_data,new_regions_2)
     peak_dict = Updata_Peak_Dict(origin_data,mountain_dict,peak_dict)
-    peak_dict_record,core_dict_record = Get_CP_Dict(FwhmBeam,VeloRes,rc_dict,mountain_array,mountain_dict,peak_dict,region_mp_dict,origin_data)
-    detect_infor_dict = DID_FacetClumps(SRecursionLBV,peak_dict_record,core_dict_record,origin_data)
+    com_dict_record,core_dict_record = Get_CP_Dict(FwhmBeam,VeloRes,rc_dict,mountain_array,mountain_dict,peak_dict,region_mp_dict,origin_data)
+    detect_infor_dict = DID_FacetClumps(SRecursionLBV,com_dict_record,core_dict_record,origin_data)
     return detect_infor_dict
+
+
