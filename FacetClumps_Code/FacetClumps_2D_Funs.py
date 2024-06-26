@@ -5,12 +5,6 @@ from scipy import signal
 from scipy.stats import multivariate_normal
 from tqdm import tqdm
 
-#usr JiangYu
-import numpy as np
-from skimage import filters,measure,morphology
-from scipy import signal
-from tqdm import tqdm
-
 def Get_Regions_FacetClumps(origin_data,RMS=0.1,threshold='otsu',temp_array=None):
     kopen_radius=1
     if threshold == 'mean':

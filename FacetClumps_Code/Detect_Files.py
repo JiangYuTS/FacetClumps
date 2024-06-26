@@ -1,6 +1,9 @@
 #usr JiangYu
 from FacetClumps.Detect_Files_Funs import Detect
 
+import warnings
+warnings.filterwarnings("ignore")
+
 if __name__ == '__main__':
     # 2D、3D
     RMS = 0.23

@@ -7,7 +7,6 @@ from astropy.table import Table
 
 from FacetClumps import Detect_FacetClumps
 
-
 def Change_pix2word(data_header, outcat, ndim):
     """
     :param data_wcs: file header.
@@ -22,13 +21,16 @@ def Change_pix2word(data_header, outcat, ndim):
     clump_Volume = outcat['Volume']
     clump_Angle = outcat['Angle']
     clump_Edge = outcat['Edge']
+    convert_to_WCS = False
     if 'CDELT1' in data_header and 'CDELT2' in data_header:
         size1, size2 = np.array([outcat['Size1'] * np.abs(data_header['CDELT1']) * 3600,
                                  outcat['Size2'] * np.abs(data_header['CDELT2']) * 3600])
+        convert_to_WCS = True
     else:
         size1, size2 = np.array([outcat['Size1'], outcat['Size2']])
         print('The size has not converted to WCS!')
         print('You need to transform the WCS table through the Pix table by yourself.')
+        convert_to_WCS = False
     if ndim == 2:
         # 2D result
         clump_Sum = outcat['Sum']
@@ -54,17 +56,19 @@ def Change_pix2word(data_header, outcat, ndim):
             cen1, cen2, cen3, temp_c = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], outcat['Cen3'], 1, 1)
         else:
             print('The data_wcs.world_n_dim is unexpected!')
-        if 'CDELT3' in data_header:
+        if 'CDELT3' in data_header and 'CUNIT3' in data_header:
             if data_header['CUNIT3'] == 'm/s' or data_header['CUNIT3'] == 'm s-1':
                 clump_Peaks = np.column_stack([peak1, peak2, peak3 / 1000])
                 clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
                 clump_Size = np.column_stack([size1, size2, outcat['Size3'] * data_header['CDELT3'] / 1000])
                 clump_Sum = outcat['Sum'] * data_header['CDELT3'] / 1000
+                convert_to_WCS = True
             elif data_header['CUNIT3'] == 'km/s' or data_header['CUNIT3'] == 'km s-1':
                 clump_Peaks = np.column_stack([peak1, peak2, peak3])
                 clump_Cen = np.column_stack([cen1, cen2, cen3])
                 clump_Size = np.column_stack([size1, size2, outcat['Size3'] * data_header['CDELT3']])
                 clump_Sum = outcat['Sum'] * data_header['CDELT3']
+                convert_to_WCS = True
             else:
                 print('Please cheek the unit of the velocity channels (str: km/s, m/s, m s-1, km s-1, or else).')
                 print('You need to transform the WCS table through the Pix table by yourself.')
@@ -72,17 +76,19 @@ def Change_pix2word(data_header, outcat, ndim):
                 clump_Cen = np.column_stack([cen1, cen2, cen3])
                 clump_Size = np.column_stack([size1, size2, outcat['Size3']])
                 clump_Sum = outcat['Sum']
+                convert_to_WCS = False
         else:
-            print('Please cheek the key world of the velocity channels (CDELT3, or else).')
+            print('Please cheek the key world of the velocity channel and unit (CDELT3, CUNIT3, or else).')
             print('You need to transform the WCS table through the Pix table by yourself.')
             clump_Peaks = np.column_stack([peak1, peak2, peak3])
             clump_Cen = np.column_stack([cen1, cen2, cen3])
             clump_Size = np.column_stack([size1, size2, outcat['Size3']])
             clump_Sum = outcat['Sum']
+            convert_to_WCS = False
     id_clumps = np.arange(1, len(clump_Peak) + 1, 1)
     outcat_wcs = np.column_stack((id_clumps, clump_Peaks, clump_Cen, clump_Size, clump_Peak,
                                   clump_Sum, clump_Volume, clump_Angle, clump_Edge))
-    return outcat_wcs
+    return outcat_wcs,convert_to_WCS
 
 def Table_Interface(did_table, data_header, ndim):
     """
@@ -107,8 +113,12 @@ def Table_Interface(did_table, data_header, ndim):
         units = [None, 'pix', 'pix', 'pix', 'pix', 'pix', 'pix', None, None, 'pix', 'deg', None]
         dtype = ['int', 'int', 'int', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32', 'int', 'int8',
                  'int8']
-        units_wcs = [None, 'deg', 'deg', 'deg', 'deg', 'pix', 'pix', data_header['BUNIT'], data_header['BUNIT'], 'pix',
+        if 'BUNIT' in data_header.keys():
+            units_wcs = [None, 'deg', 'deg', 'deg', 'deg', 'pix', 'pix', data_header['BUNIT'], data_header['BUNIT'], 'pix',
                      'deg', None]
+        else:
+            units_wcs = [None, 'deg', 'deg', 'deg', 'deg', 'pix', 'pix', 'K', 'K','pix',
+                         'deg', None]
         dtype_wcs = ['int', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32',
                      'int', 'int8', 'int8']
         td_outcat = Table(d_outcat, names=columns, dtype=dtype, units=units)
@@ -137,19 +147,23 @@ def Table_Interface(did_table, data_header, ndim):
         units = [None, 'pix', 'pix', 'pix', 'pix', 'pix', 'pix', 'pix', 'pix', 'pix', None, None, 'pix', 'deg', None]
         dtype = ['int', 'int', 'int', 'int', 'float32', 'float32', 'float32', 'float32', 'float32',
                  'float32', 'float32', 'float32', 'int', 'int8', 'int8']
-        units_wcs = [None, 'deg', 'deg', 'km/s', 'deg', 'deg', 'km/s', 'arcmin', 'arcmin', 'km/s', \
+        if 'BUNIT' in data_header.keys():
+            units_wcs = [None, 'deg', 'deg', 'km/s', 'deg', 'deg', 'km/s', 'arcmin', 'arcmin', 'km/s', \
                      data_header['BUNIT'][0], data_header['BUNIT'][0] + ' km/s', 'pix', 'deg', None]
+        else:
+            units_wcs = [None, 'deg', 'deg', 'km/s', 'deg', 'deg', 'km/s', 'arcmin', 'arcmin', 'km/s', \
+                     'K', 'K' + ' km/s', 'pix', 'deg', None]
         dtype_wcs = ['int', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32',
                      'float32', 'float32', 'float32', 'float32', 'float32', 'int', 'int8', 'int8']
         td_outcat = Table(d_outcat, names=columns, dtype=dtype, units=units)
-        td_outcat_wcs = Change_pix2word(data_header, td_outcat, ndim)
+        td_outcat_wcs,convert_to_WCS = Change_pix2word(data_header, td_outcat, ndim)
         td_outcat_wcs = Table(td_outcat_wcs, names=columns, dtype=dtype_wcs, units=units_wcs)
         for i in range(len(dtype)):
             if dtype[i] == 'float32':
                 td_outcat[columns[i]].info.format = '.3f'
             if dtype_wcs[i] == 'float32':
                 td_outcat_wcs[columns[i]].info.format = '.3f'
-    return td_outcat, td_outcat_wcs
+    return td_outcat, td_outcat_wcs,convert_to_WCS
 
 
 def Detect(file_name, parameters, mask_name, outcat_name, outcat_wcs_name):
@@ -162,7 +176,7 @@ def Detect(file_name, parameters, mask_name, outcat_name, outcat_wcs_name):
     FwhmBeam = parameters[4]
     VeloRes = parameters[5]
     SRecursionLBV = parameters[6]
-    WeightFactor = [FwhmBeam, VeloRes]
+    # WeightFactor = [FwhmBeam, VeloRes]
     did_table, td_outcat, td_outcat_wcs = [], [], []
     origin_data = fits.getdata(file_name)
     origin_data = np.squeeze(origin_data)
@@ -181,19 +195,23 @@ def Detect(file_name, parameters, mask_name, outcat_name, outcat_wcs_name):
         regions_data = did_table['regions_data']
         fits.writeto(mask_name, regions_data, overwrite=True)
         data_header = fits.getheader(file_name)
-        td_outcat, td_outcat_wcs = Table_Interface(did_table, data_header, ndim)
+        td_outcat, td_outcat_wcs, convert_to_WCS = Table_Interface(did_table, data_header, ndim)
         td_outcat.write(outcat_name, overwrite=True)
         td_outcat_wcs.write(outcat_wcs_name, overwrite=True)
-        end_1 = time.time()
-        end_2 = time.ctime()
-        delta_time = np.around(end_1 - start_1, 2)
-        time_record = np.hstack([[start_2, end_2, delta_time]])
-        time_record = Table(time_record, names=['Start', 'End', 'DTime'])
-        time_record.write(outcat_name[:-4] + '_FacetClumps_time_record.csv', overwrite=True)
         print('Number:', len(did_table['peak_value']))
-        print('Time:', delta_time)
     else:
         print('No clumps!')
+        convert_to_WCS = False
+    end_1 = time.time()
+    end_2 = time.ctime()
+    delta_time = np.around(end_1 - start_1, 2)
+    SRecursionLBV = str(SRecursionLBV)
+    par_time_record = np.hstack([[RMS, Threshold, SWindow, KBins, FwhmBeam, VeloRes, \
+                                  SRecursionLBV, start_2, end_2, delta_time, convert_to_WCS]])
+    par_time_record = Table(par_time_record, names=['RMS', 'Threshold', 'SWindow', 'KBins', \
+                    'FwhmBeam', 'VeloRes', 'SRecursionLBV', 'Start', 'End', 'DTime', 'CToWCS'])
+    par_time_record.write(outcat_name[:-4] + '_FacetClumps_record.csv', overwrite=True)
+    print('Time:', delta_time)
     did_tables = {}
     did_tables['outcat_table'] = td_outcat
     did_tables['outcat_wcs_table'] = td_outcat_wcs
