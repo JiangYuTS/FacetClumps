@@ -133,7 +133,7 @@ def Cal_Tables_From_Mask(file_name, mask_name, outcat_name, outcat_wcs_name):
     did_table, td_outcat, td_outcat_wcs = [], [], []
     origin_data = fits.getdata(file_name)
     origin_data = np.squeeze(origin_data)
-    origin_data[np.isnan(origin_data)] = -999
+    # origin_data[np.isnan(origin_data)] = -999
     ndim = origin_data.ndim
     if ndim == 2:
         did_table = Cal_Tables_From_Mask_2D(file_name,mask_name)
@@ -143,8 +143,8 @@ def Cal_Tables_From_Mask(file_name, mask_name, outcat_name, outcat_wcs_name):
         raise Exception('Please check the dimensionality of the data!')
     if len(did_table['peak_value']) != 0:
         # np.savez(outcat_name[:-4] + '_FacetClumps_npz', did_FacetClumps=did_table)
-        regions_data = did_table['regions_data']
-        fits.writeto(mask_name, regions_data, overwrite=True)
+        # regions_data = did_table['regions_data']
+        # fits.writeto(mask_name, regions_data, overwrite=True)
         data_header = fits.getheader(file_name)
         td_outcat, td_outcat_wcs, convert_to_WCS = FacetClumps.Detect_Files_Funs.Table_Interface(did_table, data_header, ndim)
         td_outcat.write(outcat_name, overwrite=True)
@@ -158,7 +158,7 @@ def Cal_Tables_From_Mask(file_name, mask_name, outcat_name, outcat_wcs_name):
     delta_time = np.around(end_1 - start_1, 2)
     par_time_record = np.hstack([[start_2, end_2, delta_time, convert_to_WCS]])
     par_time_record = Table(par_time_record, names=['Start', 'End', 'DTime', 'CToWCS'])
-    par_time_record.write(outcat_name[:-4] + '_FacetClumps_record.csv', overwrite=True)
+    par_time_record.write(outcat_name[:-4] + '_FacetClumps_Convert_Record.csv', overwrite=True)
     print('Time:', delta_time)
     did_tables = {}
     did_tables['outcat_table'] = td_outcat

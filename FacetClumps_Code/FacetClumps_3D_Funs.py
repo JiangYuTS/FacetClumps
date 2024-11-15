@@ -42,10 +42,10 @@ def Get_Regions_FacetClumps(origin_data, RMS=0.1, threshold='otsu', temp_array=N
         xor_data = np.logical_xor(temp_array > 0, dilation_data)
         and_data = np.logical_and(origin_data < threshold, xor_data)
         dilation_data = np.logical_or(temp_array, and_data)
-        #         dilation_data_1 = ndimage.binary_fill_holes(dilation_data_1)
+        # dilation_data_1 = ndimage.binary_fill_holes(dilation_data_1)
         dilation_label = measure.label(dilation_data, connectivity=3)
     regions = measure.regionprops(dilation_label)
-    regions_array = dilation_label
+    regions_array = np.array(dilation_label,dtype=np.int32)
     return regions, regions_array
 
 
@@ -89,29 +89,31 @@ def Convolve(origin_data, SWindow):
     k18 = -xt * (3 * s ** 2 - xt ** 2) / (6 * np.sqrt(2 * np.pi) * s ** 7)
     k19 = -yt * (3 * s ** 2 - yt ** 2) / (6 * np.sqrt(2 * np.pi) * s ** 7)
     k20 = -zt * (3 * s ** 2 - zt ** 2) / (6 * np.sqrt(2 * np.pi) * s ** 7)
-    gx = k2 + 1 / 3 * L ** 2 * k12 + 1 / 3 * L ** 2 * k13 + 1 / 3 * L ** 2 * k18
-    gy = k3 + 1 / 3 * L ** 2 * k14 + 1 / 3 * L ** 2 * k15 + 1 / 3 * L ** 2 * k19
-    gz = k4 + 1 / 3 * L ** 2 * k16 + 1 / 3 * L ** 2 * k17 + 1 / 3 * L ** 2 * k20
-    gxx = 2 * k5
-    gyy = 2 * k6
-    gzz = 2 * k7
-    gxy = k8
-    gxz = k9
-    gyz = k10
-    conv_gx = signal.convolve(origin_data, gx, mode='same', method='auto')
-    conv_gy = signal.convolve(origin_data, gy, mode='same', method='auto')
-    conv_gz = signal.convolve(origin_data, gz, mode='same', method='auto')
-    conv_gxx = signal.convolve(origin_data, gxx, mode='same', method='auto')
-    conv_gyy = signal.convolve(origin_data, gyy, mode='same', method='auto')
-    conv_gzz = signal.convolve(origin_data, gzz, mode='same', method='auto')
-    conv_gxy = signal.convolve(origin_data, gxy, mode='same', method='auto')
-    conv_gxz = signal.convolve(origin_data, gxz, mode='same', method='auto')
-    conv_gyz = signal.convolve(origin_data, gyz, mode='same', method='auto')
+    gx = np.array(k2 + 1 / 3 * L ** 2 * k12 + 1 / 3 * L ** 2 * k13 + 1 / 3 * L ** 2 * k18, dtype=np.float32)
+    gy = np.array(k3 + 1 / 3 * L ** 2 * k14 + 1 / 3 * L ** 2 * k15 + 1 / 3 * L ** 2 * k19, dtype=np.float32)
+    gz = np.array(k4 + 1 / 3 * L ** 2 * k16 + 1 / 3 * L ** 2 * k17 + 1 / 3 * L ** 2 * k20, dtype=np.float32)
+    gxx = np.array(2 * k5, dtype=np.float32)
+    gyy = np.array(2 * k6, dtype=np.float32)
+    gzz = np.array(2 * k7, dtype=np.float32)
+    gxy = np.array(k8, dtype=np.float32)
+    gxz = np.array(k9, dtype=np.float32)
+    gyz = np.array(k10, dtype=np.float32)
+    origin_data_T = np.array(origin_data, dtype=np.float32)
+    conv_gx = signal.convolve(origin_data_T, gx, mode='same', method='auto')
+    conv_gy = signal.convolve(origin_data_T, gy, mode='same', method='auto')
+    conv_gz = signal.convolve(origin_data_T, gz, mode='same', method='auto')
+    conv_gxx = signal.convolve(origin_data_T, gxx, mode='same', method='auto')
+    conv_gyy = signal.convolve(origin_data_T, gyy, mode='same', method='auto')
+    conv_gzz = signal.convolve(origin_data_T, gzz, mode='same', method='auto')
+    conv_gxy = signal.convolve(origin_data_T, gxy, mode='same', method='auto')
+    conv_gxz = signal.convolve(origin_data_T, gxz, mode='same', method='auto')
+    conv_gyz = signal.convolve(origin_data_T, gyz, mode='same', method='auto')
     convs = [conv_gx, conv_gy, conv_gz, conv_gxx, conv_gyy, conv_gzz, conv_gxy, conv_gxz, conv_gyz]
     conv_K = k1
     for k in [k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14, k15, k16, k17, k18, k19, k20]:
         conv_K += k
-    hook_face = signal.convolve(origin_data, conv_K, mode='same', method='auto')
+    conv_K = np.array(conv_K, dtype=np.float32)
+    hook_face = signal.convolve(origin_data_T, conv_K, mode='same', method='auto')
     return convs, hook_face
 
 
@@ -179,7 +181,7 @@ def Get_Lable(convs, region, eigenvalue_arrays, bins, keig_bins):
 
 
 def Recursion_Lable(convs, region, regions_record, eigenvalue_arrays, lnV, logV, bins, keig_bins, SRecursionLBV,
-                    recursion_time):
+                    recursion_time, regions_num):
     keig_bins -= 1
     if keig_bins < -lnV:
         keig_bins = -lnV
@@ -193,34 +195,57 @@ def Recursion_Lable(convs, region, regions_record, eigenvalue_arrays, lnV, logV,
     valid_lable[region[:, 0] - x_min, region[:, 1] - y_min, region[:, 2] - z_min] = 1
     valid_lable_measure = measure.label(valid_lable, connectivity=1)
     valid_regions_l = measure.regionprops(valid_lable_measure)
+    if len(valid_regions_l) == 2:
+        areas = []
+        for region_l in valid_regions_l:
+            area = region_l.area
+            areas.append(area)
+        areas_sort_index = np.argsort(areas)
+        valid_regions_l_T = []
+        for id_i in areas_sort_index:
+            valid_regions_l_T.append(valid_regions_l[id_i])
+        # valid_regions_l = valid_regions_l_T
     for region_l in valid_regions_l:
         coords_l = region_l.coords
         region = np.c_[coords_l[:, 0] + x_min, coords_l[:, 1] + y_min, coords_l[:, 2] + z_min]
         coords_range, lb_area, v_delta = Get_LBV_Table(coords_l)
         area = region_l.area
-        if lb_area <= SRecursionLBV[0] and v_delta <= SRecursionLBV[1] and recursion_time > 1 and (
-                area >= logV or len(valid_regions_l) == 1):
-            regions_record.append(region)
+        if lb_area <= SRecursionLBV[0] and v_delta <= SRecursionLBV[1] and recursion_time > 1 and \
+                (area >= logV or len(valid_regions_l) == 1):
+            regions_record[0].append(region)
+        elif lb_area <= SRecursionLBV[0] and v_delta <= SRecursionLBV[1] and recursion_time > 1 and \
+                area > np.max([2, logV / 2]) and len(valid_regions_l) == 2:
+            # regions_record[1].append([regions_num, region])
+            regions_num += 1
         elif lb_area > SRecursionLBV[0] or v_delta > SRecursionLBV[1]:
             recursion_time += 1
             region = Get_Lable(convs, region, eigenvalue_arrays, bins, keig_bins)
             if len(region) != 0:
                 regions_record = Recursion_Lable(convs, region, regions_record, eigenvalue_arrays, \
-                                                 lnV, logV, bins, keig_bins, SRecursionLBV, recursion_time)
+                                                 lnV, logV, bins, keig_bins, SRecursionLBV, recursion_time, regions_num)
+    return regions_record
+
+
+def Merge_Regions_Record(regions_record):
+    for i in range(1, len(regions_record[1])):
+        if regions_record[1][i][0] == 0:
+            regions_record[0].append(regions_record[1][i - 1][1])
+    if len(regions_record[1]) > 0:
+        regions_record[0].append(regions_record[1][-1][1])
     return regions_record
 
 
 def Get_COM(origin_data, regions_record):
     center_of_mass = []
-    label_area_min = 0
+    # label_area_min = 0
     for final_region in regions_record:
-        if len(final_region[:, 0]) > label_area_min:
-            x_region = final_region[:, 0]
-            y_region = final_region[:, 1]
-            z_region = final_region[:, 2]
-            od_mass = origin_data[x_region, y_region, z_region]
-            center_of_mass.append(
-                np.around((np.c_[od_mass, od_mass, od_mass] * final_region).sum(0) / od_mass.sum(), 3).tolist())
+        # if len(final_region[:, 0]) > label_area_min:
+        x_region = final_region[:, 0]
+        y_region = final_region[:, 1]
+        z_region = final_region[:, 2]
+        od_mass = origin_data[x_region, y_region, z_region]
+        center_of_mass.append(
+            np.around((np.c_[od_mass, od_mass, od_mass] * final_region).sum(0) / od_mass.sum(), 3).tolist())
     center_of_mass = np.array(center_of_mass)
     return center_of_mass
 
@@ -228,24 +253,26 @@ def Get_COM(origin_data, regions_record):
 def Get_Total_COM(origin_data, regions, convs, kbins, SRecursionLBV):
     keig_bins = -1
     recursion_time = 0
-    regions_record = []
+    regions_record = [[], []]
     eigenvalue_0 = np.zeros_like(origin_data)
     eigenvalue_1 = np.zeros_like(origin_data)
     eigenvalue_2 = np.zeros_like(origin_data)
     for i in tqdm(range(len(regions))):
-        coords = regions[i].coords
-        region = np.c_[coords[:, 0], coords[:, 1], coords[:, 2]]
-        lnV = np.int64(np.log(len(coords)))
-        logV = np.log10(len(coords))
+        region_i = np.array(regions[i].coords, dtype=np.int32)
+        lnV = np.int32(np.log(len(region_i)))
+        logV = np.min([np.log10(len(region_i)), 7])
+        # logV = np.log10(len(region_i))
         bins = kbins * lnV
         eigenvalue_arrays = [eigenvalue_0, eigenvalue_1, eigenvalue_2]
-        eigenvalue_arrays = Calculate_Eig(eigenvalue_arrays, convs, region)
-        regions_record = Recursion_Lable(convs, region, regions_record, eigenvalue_arrays, lnV, logV, bins, keig_bins,
-                                         SRecursionLBV, recursion_time)
-        eigenvalue_0[coords[:, 0], coords[:, 1], coords[:, 2]] = 0
-        eigenvalue_1[coords[:, 0], coords[:, 1], coords[:, 2]] = 0
-        eigenvalue_2[coords[:, 0], coords[:, 1], coords[:, 2]] = 0
-    com = Get_COM(origin_data, regions_record)
+        eigenvalue_arrays = Calculate_Eig(eigenvalue_arrays, convs, region_i)
+        regions_num = 0
+        regions_record = Recursion_Lable(convs, region_i, regions_record, eigenvalue_arrays, \
+                                         lnV, logV, bins, keig_bins, SRecursionLBV, recursion_time, regions_num)
+        eigenvalue_0[region_i[:, 0], region_i[:, 1], region_i[:, 2]] = 0
+        eigenvalue_1[region_i[:, 0], region_i[:, 1], region_i[:, 2]] = 0
+        eigenvalue_2[region_i[:, 0], region_i[:, 1], region_i[:, 2]] = 0
+    regions_record = Merge_Regions_Record(regions_record)
+    com = Get_COM(origin_data, regions_record[0])
     return com
 
 
@@ -274,15 +301,15 @@ def Build_RC_Dict(com, regions_array, regions_first):
     rc_dict = {}
     new_regions = []
     temp_regions_array = np.zeros_like(regions_array)
-    for i in range(1, np.int64(regions_array.max() + 1)):
+    for i in range(1, len(regions_first) + 1):
         temp_rc_dict[i] = []
-    center = np.array(np.around(com, 0), dtype='uint16')
+    center = np.array(np.around(com, 0), dtype = np.int32)
     for cent in center:
         if regions_array[cent[0], cent[1], cent[2]] != 0:
             temp_rc_dict[regions_array[cent[0], cent[1], cent[2]]].append(com[k1])
             i_record.append(regions_array[cent[0], cent[1], cent[2]])
         k1 += 1
-    for i in range(1, np.int64(regions_array.max()) + 1):
+    for i in range(1, len(regions_first) + 1):
         if i in i_record:
             coordinates = regions_first[i - 1].coords
             temp_regions_array[(coordinates[:, 0], coordinates[:, 1], coordinates[:, 2])] = 1
@@ -301,7 +328,7 @@ def Build_MPR_Dict(origin_data, regions):
     mountain_dict[k] = []
     region_mp_dict = {}
     origin_data = origin_data + np.random.random(origin_data.shape) / 100000
-    mountain_array = np.zeros_like(origin_data)
+    mountain_array = np.zeros_like(origin_data,dtype=np.int32)
     temp_origin_data = np.zeros(tuple(np.array(origin_data.shape) + 2))
     for i in range(len(regions)):
         region_mp_dict[i] = []
@@ -407,9 +434,8 @@ def Update_CP_Dict_FacetClumps(FwhmBeam, VeloRes, new_peak_dict, com_dict, new_c
         new_peak_dict_2[key] = new_peak_dict[key]
     for key_center in com_dict.keys():
         com_coord = com_dict[key_center]
-        com_coord = np.array(np.around(com_coord, 0), dtype='uint16')
-        if mountain_array[com_coord[0], com_coord[1], com_coord[2]] != 0:
-            key_mountain = mountain_array[com_coord[0], com_coord[1], com_coord[2]]
+        com_coord = np.array(np.around(com_coord, 0), dtype = np.int32)
+        key_mountain = mountain_array[com_coord[0], com_coord[1], com_coord[2]]
         if key_mountain not in key_mountain_record:
             com_dict_temp[key_center] = com_dict[key_center]
             core_dict_center[key_center] = new_core_dict[key_mountain]
@@ -503,7 +529,7 @@ def Get_DV(box_data, box_center):
     if V[1][0] < 0 and V[0][0] > 0 and V[1][1] > 0:
         V = -V
     size_ratio = np.sqrt(D[0] / D[1])
-    angle = np.around(np.arccos(V[0][0]) * 180 / np.pi - 90, 2)
+    angle = np.around(np.arccos(V[0][0]) * 180 / np.pi - 90, 3)
     return D, V, size_ratio, angle
 
 
@@ -519,7 +545,7 @@ def DID_FacetClumps(SRecursionLBV, center_dict, core_dict, origin_data):
     clump_angle = []
     detect_infor_dict = {}
     k = 0
-    regions_data = np.zeros_like(origin_data)
+    regions_data = np.zeros_like(origin_data,dtype=np.int32)
     data_size = origin_data.shape
     for key in center_dict.keys():
         core_x = np.array(core_dict[key])[:, 0]
@@ -545,7 +571,7 @@ def DID_FacetClumps(SRecursionLBV, center_dict, core_dict, origin_data):
             peak_location.append(peak_coord)
             clump_center.append(center_dict[key])
             od_mass = origin_data[core_x, core_y, core_z]
-            #         od_mass = od_mass - od_mass.min()
+            # od_mass = od_mass - od_mass.min()
             mass_array = np.c_[od_mass, od_mass, od_mass]
             clump_com.append(np.around((np.c_[mass_array] * core_dict[key]).sum(0) \
                                        / od_mass.sum(), 3).tolist())
@@ -579,15 +605,20 @@ def DID_FacetClumps(SRecursionLBV, center_dict, core_dict, origin_data):
 def Detect_FacetClumps(RMS, Threshold, SWindow, KBins, FwhmBeam, VeloRes, SRecursionLBV, origin_data):
     if RMS > Threshold:
         raise Exception("RMS needs less than Threshold!")
-    regions_1, regions_array_1 = Get_Regions_FacetClumps(origin_data, RMS, Threshold, np.array([0]))
+    regions_1,regions_array_1 = Get_Regions_FacetClumps(origin_data, RMS, Threshold, np.array([0]))
     convs, hook_face = Convolve(origin_data * (regions_array_1 > 0), SWindow)
     com = Get_Total_COM(hook_face, regions_1, convs, KBins, SRecursionLBV)
+    convs, hook_face = None, None
     new_regions_1, regions_array_1, rc_dict = Build_RC_Dict(com, regions_array_1, regions_1)
+    regions_1 = None
     regions_2, regions_array_2 = Get_Regions_FacetClumps(origin_data, RMS, Threshold, regions_array_1)
+    regions_array_1 = None
     new_regions_2, regions_array_2, rc_dict = Build_RC_Dict(com, regions_array_2, regions_2)
+    com, regions_array_2, regions_2 = None, None, None
     mountain_array, mountain_dict, peak_dict, region_mp_dict = Build_MPR_Dict(origin_data, new_regions_2)
+    new_regions_2 = None
     peak_dict = Updata_Peak_Dict(origin_data, mountain_dict, peak_dict)
-    com_dict_record, core_dict_record = Get_CP_Dict(FwhmBeam, VeloRes, rc_dict, mountain_array, mountain_dict,
-                                                    peak_dict, region_mp_dict, origin_data)
+    com_dict_record, core_dict_record = Get_CP_Dict(FwhmBeam, VeloRes, rc_dict, mountain_array, mountain_dict,peak_dict, region_mp_dict, origin_data)
+    rc_dict, mountain_array, mountain_dict, peak_dict, region_mp_dict = None, None, None, None, None
     detect_infor_dict = DID_FacetClumps(SRecursionLBV, com_dict_record, core_dict_record, origin_data)
     return detect_infor_dict

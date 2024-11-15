@@ -37,12 +37,12 @@ def Convolve(origin_data,SWindow):
     xy = np.column_stack([xres.flat, yres.flat])
     sigma = np.array([s,s])
     covariance = np.diag(sigma**2)
-    center = [np.int(s),np.int(s)]
+    center = [np.int64(s),np.int64(s)]
     prob_density = multivariate_normal.pdf(xy, mean=center, cov=covariance)
     prob_density = prob_density.reshape((SWindow,SWindow))
     w = np.ones((SWindow,SWindow))
 #     w = prob_density
-    y = np.linspace(-np.int(s),np.int(s),SWindow)
+    y = np.linspace(-np.int64(s),np.int64(s),SWindow)
     x = np.expand_dims(y,axis = 1)
     k1 = w/np.sum(w**2)
     k2 = w*x/np.sum((w*x)**2)
@@ -186,7 +186,7 @@ def Build_RC_Dict(com,regions_array,regions_first):
     rc_dict = {}
     new_regions = []
     temp_regions_array = np.zeros_like(regions_array)
-    for i in range(1,np.int(regions_array.max()+1)):
+    for i in range(1,np.int64(regions_array.max()+1)):
         temp_rc_dict[i] = []
     center = np.array(np.around(com),dtype = 'uint16')
     for cent in center:
@@ -194,7 +194,7 @@ def Build_RC_Dict(com,regions_array,regions_first):
             temp_rc_dict[regions_array[cent[0],cent[1]]].append(com[k1])
             i_record.append(regions_array[cent[0],cent[1]])
         k1 += 1
-    for i in range(1,np.int(regions_array.max())+1):
+    for i in range(1,np.int64(regions_array.max())+1):
         if i in i_record:
             coordinates = regions_first[i-1].coords
             temp_regions_array[(coordinates[:,0],coordinates[:,1])] = 1
@@ -399,7 +399,7 @@ def DID_FacetClumps(SRecursionLB,center_dict,core_dict,origin_data):
     clump_edge = []
     detect_infor_dict = {}
     k = 0
-    regions_data = np.zeros_like(origin_data)
+    regions_data = np.zeros_like(origin_data,dtype=np.int16)
     data_size = origin_data.shape
     for key in center_dict.keys():
         core_x = np.array(core_dict[key])[:,0]
@@ -462,6 +462,3 @@ def Detect_FacetClumps(RMS,Threshold,SWindow,KBins,SRecursionLB,origin_data):
     com_dict_record,core_dict_record = Get_CP_Dict(rc_dict,mountain_array,mountain_dict,peak_dict,region_mp_dict,origin_data)
     detect_infor_dict = DID_FacetClumps(SRecursionLB,com_dict_record,core_dict_record,origin_data)
     return detect_infor_dict
-
-
-

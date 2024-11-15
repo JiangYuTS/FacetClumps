@@ -1,5 +1,6 @@
 #usr JiangYu
 from FacetClumps.Detect_Files_Funs import Detect
+from FacetClumps.Detect_Files_SN_Funs import Detect_SN
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -16,7 +17,10 @@ if __name__ == '__main__':
 
     parameters = [RMS, Threshold, SWindow, KBins, FwhmBeam, VeloRes, SRecursionLBV]
     file_name = 'file_name'
+    rms_file = 'rms_file'
     mask_name = 'mask.fits'
     outcat_name = 'outcat.csv'
     outcat_wcs_name = 'outcat_wcs.csv'
     did_FacetClumps = Detect(file_name, parameters, mask_name, outcat_name, outcat_wcs_name)
+
+    Detect_SN(file_name, parameters, mask_name, outcat_name, outcat_wcs_name, rms_file, detect_SN_data=True)
