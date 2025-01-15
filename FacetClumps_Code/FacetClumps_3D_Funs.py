@@ -575,8 +575,8 @@ def DID_FacetClumps(SRecursionLBV, center_dict, core_dict, origin_data):
             mass_array = np.c_[od_mass, od_mass, od_mass]
             clump_com.append(np.around((np.c_[mass_array] * core_dict[key]).sum(0) \
                                        / od_mass.sum(), 3).tolist())
-            size = np.sqrt((mass_array * (np.array(core_dict[key]) ** 2)).sum(0) / od_mass.sum() - \
-                           ((mass_array * np.array(core_dict[key])).sum(0) / od_mass.sum()) ** 2)
+            size = np.sqrt(np.abs((mass_array * (np.array(core_dict[key]) ** 2)).sum(0) / od_mass.sum() - \
+                           ((mass_array * np.array(core_dict[key])).sum(0) / od_mass.sum()) ** 2))
             clump_size.append(size.tolist())
             clump_sum.append(origin_data[core_x, core_y, core_z].sum())
             clump_volume.append(len(core_dict[key]))

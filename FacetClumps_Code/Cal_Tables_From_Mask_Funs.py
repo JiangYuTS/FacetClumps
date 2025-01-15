@@ -97,8 +97,8 @@ def Cal_Tables_From_Mask_3D(file_name,mask_name):
         mass_array = np.c_[od_mass,od_mass,od_mass]
         com = np.around((mass_array*clump_coords).sum(0)\
                     /od_mass.sum(),3).tolist()
-        size = np.sqrt((mass_array*(np.array(clump_coords)**2)).sum(0)/od_mass.sum()- \
-                       ((mass_array*np.array(clump_coords)).sum(0)/od_mass.sum())**2)
+        size = np.sqrt(np.abs((mass_array*(np.array(clump_coords)**2)).sum(0)/od_mass.sum()- \
+                       ((mass_array*np.array(clump_coords)).sum(0)/od_mass.sum())**2))
         clump_com.append(com)
         clump_size.append(size.tolist())
         com_item = [com[0]-clump_x_min,com[1]-clump_y_min,com[2]-clump_z_min]

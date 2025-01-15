@@ -110,10 +110,10 @@ def Table_Interface(did_table, data_header, ndim):
         dtype = ['int', 'int', 'int', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32', 'int', 'float32',
                  'int8']
         if 'BUNIT' in data_header.keys():
-            units_wcs = [None, 'deg', 'deg', 'deg', 'deg', 'pix', 'pix', data_header['BUNIT'], data_header['BUNIT'], 'pix',
+            units_wcs = [None, 'deg', 'deg', 'deg', 'deg', 'arcsec', 'arcsec', data_header['BUNIT'], data_header['BUNIT'], 'pix',
                      'deg', None]
         else:
-            units_wcs = [None, 'deg', 'deg', 'deg', 'deg', 'pix', 'pix', 'K', 'K','pix',
+            units_wcs = [None, 'deg', 'deg', 'deg', 'deg', 'arcsec', 'arcsec', 'K', 'K','pix',
                          'deg', None]
         dtype_wcs = ['int', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32',
                      'int', 'float16', 'int8']
@@ -148,10 +148,10 @@ def Table_Interface(did_table, data_header, ndim):
         dtype = ['int', 'int', 'int', 'int', 'float32', 'float32', 'float32', 'float32', 'float32',
                  'float32', 'float32', 'float32', 'int', 'float16', 'int8']
         if 'BUNIT' in data_header.keys():
-            units_wcs = [None, 'deg', 'deg', 'km/s', 'deg', 'deg', 'km/s', 'arcmin', 'arcmin', 'km/s', \
+            units_wcs = [None, 'deg', 'deg', 'km/s', 'deg', 'deg', 'km/s', 'arcsec', 'arcsec', 'km/s', \
                      data_header['BUNIT'][0], data_header['BUNIT'][0] + ' km/s', 'pix', 'deg', None]
         else:
-            units_wcs = [None, 'deg', 'deg', 'km/s', 'deg', 'deg', 'km/s', 'arcmin', 'arcmin', 'km/s', \
+            units_wcs = [None, 'deg', 'deg', 'km/s', 'deg', 'deg', 'km/s', 'arcsec', 'arcsec', 'km/s', \
                      'K', 'K' + ' km/s', 'pix', 'deg', None]
         dtype_wcs = ['int', 'float32', 'float32', 'float32', 'float32', 'float32', 'float32',
                      'float32', 'float32', 'float32', 'float32', 'float32', 'int', 'float16', 'int8']
