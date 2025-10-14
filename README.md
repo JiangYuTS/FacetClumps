@@ -13,7 +13,7 @@ If you use FacetClumps in a publication, please cite the article [Jiang Yu et al
 
 #### Direction for usage
 
-Please refer to Eamples/Examples_Files_FacetClumps.ipynb for the usage in detecting fits files. 
+Please refer to Eamples/Examples_Files_FacetClumps.ipynb and [DPConCFil clumpsObj](https://github.com/JiangYuTS/DPConCFil/blob/main/Manuals/DPConCFil_Manual.ipynb) for the usage in detecting fits files. 
 
 #### The reference of the Example data 
 
