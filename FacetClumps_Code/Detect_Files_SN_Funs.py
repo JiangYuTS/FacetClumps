@@ -11,7 +11,7 @@ def Convert_SN_Data(file_name,rms_file,outcat_name):
     data_header = fits.getheader(file_name)
     rms_data = fits.getdata(rms_file)
     rms_data = np.squeeze(rms_data)
-    file_name_SN = outcat_name[:-4] + '_SN_Data.fits'
+    file_name_SN = outcat_name[:-len(outcat_name.split('.')[-1])-1] + '_SN_Data.fits'
     if rms_data.shape[0]!=origin_data.shape[1] or rms_data.shape[1]!=origin_data.shape[2]:
         convert_to_SN = False
         print('The shape of RMS data and original data is not matched.')

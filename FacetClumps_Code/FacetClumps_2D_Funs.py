@@ -67,102 +67,93 @@ def Convolve(origin_data,SWindow):
     convs = [conv_gx,conv_gy,conv4,conv5,conv6]
     return convs,hook_face
 
-def Calculate_Eig(origin_data,convs,region):
-    conv4 = convs[2]
-    conv5 = convs[3]
-    conv6 = convs[4]
-    coords = (region[:,0],region[:,1])
-    eigenvalue_0 = np.zeros_like(origin_data)
-    eigenvalue_1 = np.zeros_like(origin_data)
-    for i,j in zip(coords[0],coords[1]):
-        A = np.array([[2*conv4[i,j],conv5[i,j]],[conv5[i,j],2*conv6[i,j]]])
-        a,b = np.linalg.eig(A)
-        eigenvalue_0[i,j] = a[0]
-        eigenvalue_1[i,j] = a[1]
-    eigenvalue = [eigenvalue_0,eigenvalue_1]
-    return eigenvalue
 
-def Get_Lable(origin_data,convs,region,eigenvalue,bins,keig_bins):
-    times = 2
-    conv_gx = convs[0]
-    conv_gy = convs[1]
-    coords = (region[:,0],region[:,1])
-    temp_data = np.zeros_like(origin_data,dtype = 'uint16')
-    temp_data[coords] = 1
-    label_data = np.zeros_like(origin_data,dtype = 'uint16')
-    number_ex,eigs_x = np.histogram(eigenvalue[0][coords],bins = bins)
-    number_ey,eigs_y = np.histogram(eigenvalue[1][coords],bins = bins)
-    eig_x = eigs_x[bins + keig_bins]
-    eig_y = eigs_y[bins + keig_bins]
-    x_line = convs[0][region[:,0],region[:,1]]
-    y_line = convs[1][region[:,0],region[:,1]]
-    gra_x_min = -times*np.std(x_line)
-    gra_x_max = times*np.std(x_line)
-    gra_y_min = -times*np.std(y_line)
-    gra_y_max = times*np.std(y_line)
-    new_region = []
-    for i,j in zip(coords[0],coords[1]):
-        if (eigenvalue[0][i,j]<eig_x and eigenvalue[1][i,j]<eig_y)\
-            and ((conv_gx[i,j]>gra_x_min and conv_gx[i,j]< gra_x_max)\
-            or (conv_gy[i,j]>gra_y_min and conv_gy[i,j]< gra_y_max)):
-            label_data[i,j] = 1
-            new_region.append([i,j])
-    new_region = np.array(new_region)
-    return new_region
+def Calculate_Eig(eigenvalue_arrays, convs, region):
+    coords = (region[:, 0], region[:, 1])
+    H = np.array([
+        [2*convs[2][coords], convs[3][coords]],
+        [convs[3][coords], 2*convs[4][coords]]
+    ])
+    vals = np.linalg.eigvals(np.transpose(H, (2, 0, 1)))
+    eigenvalue_arrays[0][coords], eigenvalue_arrays[1][coords] = vals[:, 0], vals[:, 1]
+    return eigenvalue_arrays
 
-def Recursion_Lable(origin_data,convs,region,regions_record,eigenvalue,lnV,logV,bins,keig_bins,SRecursionLB,recursion_time):
-    keig_bins -= 1
-    if keig_bins < -lnV:
-        keig_bins = -lnV
-    x_min = region[:,0].min()
-    x_max = region[:,0].max()
-    y_min = region[:,1].min()
-    y_max = region[:,1].max()
-    valid_lable = np.zeros([x_max-x_min+2,y_max-y_min+2])
-    valid_lable[region[:,0]-x_min,region[:,1]-y_min] = 1
-    valid_lable_measure = measure.label(valid_lable,connectivity=1)
-    valid_regions_l = measure.regionprops(valid_lable_measure)
-    for region_l in valid_regions_l:
-        coords_l = region_l.coords
-        region = np.c_[coords_l[:,0]+x_min,coords_l[:,1]+y_min]
-        area = region_l.area
-        if area <= SRecursionLB and recursion_time > 1 and (area >= logV or len(valid_regions_l) == 1):
-            regions_record.append(region)
+
+def Get_Lable(convs, region, eigenvalue_arrays, bins, keig_bins):
+    coords = (region[:, 0], region[:, 1])
+    ex = np.histogram(eigenvalue_arrays[0][coords], bins=bins)[1][bins + keig_bins]
+    ey = np.histogram(eigenvalue_arrays[1][coords], bins=bins)[1][bins + keig_bins]
+
+    gx, gy = convs[0][coords], convs[1][coords]
+    sx, sy = 2*np.std(gx), 2*np.std(gy)
+
+    mask = (
+        (eigenvalue_arrays[0][coords] < ex) &
+        (eigenvalue_arrays[1][coords] < ey) &
+        ((np.abs(gx) < sx) | (np.abs(gy) < sy))
+    )
+    return region[mask]
+
+
+def Recursion_Lable(convs, region, regions_record, eigenvalue_arrays, \
+                    lnV, logV, bins, keig_bins, SRecursionLB, recursion_time, regions_num):
+    keig_bins = max(keig_bins-1, -lnV)
+    
+    b_min, l_min = region.min(0)
+    box = np.zeros(region.max(0) - [b_min, l_min] + 2)
+    box[region[:, 0]-b_min, region[:, 1]-l_min] = 1
+    for r in measure.regionprops(measure.label(box, connectivity=1)):
+        coords = r.coords + [b_min, l_min]
+        area = r.area
+        
+        if area <= SRecursionLB and recursion_time > 1:
+            if area >= logV or len(regions_record[0]) == 0:
+                regions_record[0].append(coords)
+            elif area > max(2, logV/2):
+                regions_num += 1
         elif  area > SRecursionLB:
-            recursion_time += 1
-            region = Get_Lable(origin_data,convs,region,eigenvalue,bins,keig_bins)
-            if len(region)!=0:
-                regions_record = Recursion_Lable(origin_data,convs,region,regions_record,eigenvalue,lnV,logV,bins,keig_bins,SRecursionLB,recursion_time)
+            region_new = Get_Lable(convs, coords, eigenvalue_arrays, bins, keig_bins)
+            if len(region_new):
+                regions_record = Recursion_Lable(convs, region_new, regions_record, eigenvalue_arrays, \
+                                                 lnV, logV, bins, keig_bins, SRecursionLB, recursion_time+1, regions_num)
+    
     return regions_record
 
-def Get_COM(origin_data,regions_record):
-    center_of_mass = []
-    label_area_min = 0
-    for final_region in regions_record:
-        if len(final_region[:,0])> label_area_min:
-            x_region = final_region[:,0]
-            y_region = final_region[:,1]
-            od_mass = origin_data[x_region,y_region]
-            center_of_mass.append(np.around((np.c_[od_mass,od_mass]*final_region).sum(0)\
-                /od_mass.sum(),3).tolist())
-    return center_of_mass
 
-def Get_Total_COM(origin_data,regions,convs,kbins,SRecursionLB):
-    keig_bins = -1
-    recursion_time = 0
-    regions_record = []
-    for i in tqdm(range(len(regions))):
-        coords = regions[i].coords
-        region = np.c_[coords[:,0],coords[:,1]]
-        lnV = np.int64(np.log(len(coords)))
-        logV = np.log10(len(coords))
+def Merge_Regions_Record(regions_record):
+    if regions_record[1]:
+        regions_record[0] += [r[1] for r in regions_record[1]]
+    return regions_record
+
+
+def Get_COM(origin_data, regions_record):
+    return np.array([
+        np.around((origin_data[r[:,0], r[:,1]][:, None]*r).sum(0)/origin_data[r[:,0], r[:,1]].sum(), 3)
+        for r in regions_record
+    ])
+
+
+def Get_Total_COM(origin_data, regions, convs, kbins, SRecursionLBV):
+    eigenvalue_0, eigenvalue_1 = np.zeros_like(origin_data), np.zeros_like(origin_data)
+    regions_record = [[], []]
+
+    for reg in tqdm(range(len(regions))):
+        coords = np.array(regions[reg].coords, dtype=int)
+        lnV = int(np.log(len(coords)))
+        logV = min(np.log10(len(coords)), 7)
         bins = kbins*lnV
-        eigenvalue = Calculate_Eig(origin_data,convs,region)
-        regions_record = Recursion_Lable(origin_data,convs,region,regions_record,eigenvalue,lnV,logV,bins,keig_bins,SRecursionLB,recursion_time)
-    com = Get_COM(origin_data,regions_record)
-    sorted_id_com = sorted(range(len(com)), key=lambda k: com[k], reverse=False)
-    com = (np.array(com)[sorted_id_com])
-    return com
+
+        eigenvalue_arrays = [eigenvalue_0, eigenvalue_1]
+        eigenvalue_arrays = Calculate_Eig(eigenvalue_arrays, convs, coords)
+        
+        regions_record = Recursion_Lable(convs, coords, regions_record, eigenvalue_arrays, lnV, logV, bins, -1, SRecursionLBV, 0, 0)
+
+        eigenvalue_0[coords[:,0], coords[:,1]] = 0
+        eigenvalue_1[coords[:,0], coords[:,1]] = 0
+
+    regions_record = Merge_Regions_Record(regions_record)
+    return Get_COM(origin_data, regions_record[0])
+
 
 def GNC_FacetClumps(core_data,cores_coordinate):
     xres,yres = core_data.shape
@@ -188,7 +179,7 @@ def Build_RC_Dict(com,regions_array,regions_first):
     temp_regions_array = np.zeros_like(regions_array)
     for i in range(1,np.int64(regions_array.max()+1)):
         temp_rc_dict[i] = []
-    center = np.array(np.around(com),dtype = 'uint16')
+    center = np.array(np.around(com),dtype = 'uint32')
     for cent in center:
         if regions_array[cent[0],cent[1]] != 0 :
             temp_rc_dict[regions_array[cent[0],cent[1]]].append(com[k1])
@@ -203,7 +194,7 @@ def Build_RC_Dict(com,regions_array,regions_first):
             k2 += 1
     return new_regions,temp_regions_array,rc_dict
 
-def Build_MPR_Dict(origin_data,regions):
+def Build_MPR_Dict(origin_data, regions):
     k = 1
     reg = -1
     peak_dict = {}
@@ -212,39 +203,41 @@ def Build_MPR_Dict(origin_data,regions):
     mountain_dict[k] = []
     region_mp_dict = {}
     origin_data = origin_data + np.random.random(origin_data.shape) / 100000
-    mountain_array = np.zeros_like(origin_data)
-    temp_origin_data = np.zeros(tuple(np.array(origin_data.shape)+2))
-    temp_origin_data[1:temp_origin_data.shape[0]-1,1:temp_origin_data.shape[1]-1]=origin_data
+    mountain_array = np.zeros_like(origin_data,dtype=np.int32)
+    temp_origin_data = np.zeros(tuple(np.array(origin_data.shape) + 2))
     for i in range(len(regions)):
         region_mp_dict[i] = []
     for region in tqdm(regions):
         reg += 1
         coordinates = region.coords
+        temp_origin_data[(coordinates[:, 0] + 1, coordinates[:, 1] + 1)] = \
+            origin_data[(coordinates[:, 0], coordinates[:, 1])]
         for i in range(coordinates.shape[0]):
             temp_coords = []
-            if mountain_array[coordinates[i][0],coordinates[i][1]] == 0:
+            if mountain_array[coordinates[i][0], coordinates[i][1]] == 0:
                 temp_coords.append(coordinates[i].tolist())
-                mountain_array[coordinates[i][0],coordinates[i][1]] = k
-                gradients,new_center = GNC_FacetClumps(temp_origin_data,coordinates[i])
-                if gradients.max() > 0 and mountain_array[new_center[0],new_center[1]] == 0:
+                mountain_array[coordinates[i][0], coordinates[i][1]] = k
+                gradients, new_center = GNC_FacetClumps(temp_origin_data, coordinates[i])
+                if gradients.max() > 0 and mountain_array[new_center[0], new_center[1]] == 0:
                     temp_coords.append(new_center)
-                while gradients.max() > 0 and mountain_array[new_center[0],new_center[1]] == 0:
-                    mountain_array[new_center[0],new_center[1]] = k
-                    gradients,new_center = GNC_FacetClumps(temp_origin_data,new_center)
-                    if gradients.max() > 0 and mountain_array[new_center[0],new_center[1]] == 0:
+                while gradients.max() > 0 and mountain_array[new_center[0], new_center[1]] == 0:
+                    mountain_array[new_center[0], new_center[1]] = k
+                    gradients, new_center = GNC_FacetClumps(temp_origin_data, new_center)
+                    if gradients.max() > 0 and mountain_array[new_center[0], new_center[1]] == 0:
                         temp_coords.append(new_center)
-                mountain_array[np.stack(temp_coords)[:,0],np.stack(temp_coords)[:,1]]=\
-                    mountain_array[new_center[0],new_center[1]]
-                mountain_dict[mountain_array[new_center[0],new_center[1]]] += temp_coords
+                mountain_array[np.stack(temp_coords)[:, 0], np.stack(temp_coords)[:, 1]] = \
+                    mountain_array[new_center[0], new_center[1]]
+                mountain_dict[mountain_array[new_center[0], new_center[1]]] += temp_coords
                 if gradients.max() <= 0:
                     peak_dict[k].append(new_center)
                     region_mp_dict[reg].append(k)
                     k += 1
                     mountain_dict[k] = []
                     peak_dict[k] = []
-    del(mountain_dict[k])
-    del(peak_dict[k])
-    return mountain_array,mountain_dict,peak_dict,region_mp_dict
+    del (mountain_dict[k])
+    del (peak_dict[k])
+    return mountain_array, mountain_dict, peak_dict, region_mp_dict
+
 
 def Dists_Array(matrix_1, matrix_2):
     matrix_1 = np.array(matrix_1)
@@ -269,20 +262,26 @@ def Connectivity_FacetClumps(core_dict_1,core_dict_2,i_num,j_num):
     box_region = measure.regionprops(box_label)
     return len(box_region)
 
-def Delect(new_peak_dict,new_core_dict,com_dict,core_dict_center,key_peak_record,near_k_2,origin_data):
+def Delect(new_peak_dict, new_core_dict, com_keys_array, com_values_array, core_dict_center,
+           key_peak_record, near_k_2, origin_data):
+    del_key_peak_ids = []
+    key_peak_id = 0
     for key_peak in key_peak_record:
-        dist = Dists_Array([new_peak_dict[key_peak]], list(com_dict.values()))
+        dist = Dists_Array([new_peak_dict[key_peak]], com_values_array)
         dist_index_sort = np.argsort(dist[0])
-        pdc_sort = np.array(list(com_dict.keys()))[dist_index_sort]
+        pdc_sort = com_keys_array[dist_index_sort]
         i_num = key_peak
         for key_center in pdc_sort[:near_k_2]:
             j_num = key_center
-            connectivity_1 = Connectivity_FacetClumps(new_core_dict,core_dict_center,i_num,j_num)
+            connectivity_1 = Connectivity_FacetClumps(new_core_dict, core_dict_center, i_num, j_num)
             if connectivity_1 == 1:
-                core_dict_center[key_center] += new_core_dict[key_peak]
+                core_dict_center[key_center] = np.r_[core_dict_center[key_center], new_core_dict[key_peak]]
                 del new_core_dict[key_peak]
                 del new_peak_dict[key_peak]
+                del_key_peak_ids.append(key_peak_id)
                 break
+        key_peak_id += 1
+    return del_key_peak_ids
 
 
 def Update_CP_Dict_FacetClumps(new_peak_dict, com_dict, new_core_dict, mountain_array, origin_data):
@@ -294,10 +293,9 @@ def Update_CP_Dict_FacetClumps(new_peak_dict, com_dict, new_core_dict, mountain_
     for key in new_peak_dict.keys():
         new_peak_dict_2[key] = new_peak_dict[key]
     for key_center in com_dict.keys():
-        peak_coord = com_dict[key_center]
-        peak_coord = np.array(np.around(peak_coord, 0), dtype='uint16')
-        if mountain_array[peak_coord[0], peak_coord[1]] != 0:
-            key_mountain = mountain_array[peak_coord[0], peak_coord[1]]
+        com_coord = com_dict[key_center]
+        com_coord = np.array(np.around(com_coord, 0), dtype = np.int32)
+        key_mountain = mountain_array[com_coord[0], com_coord[1]]
         if key_mountain not in key_mountain_record:
             com_dict_temp[key_center] = com_dict[key_center]
             core_dict_center[key_center] = new_core_dict[key_mountain]
@@ -313,33 +311,39 @@ def Update_CP_Dict_FacetClumps(new_peak_dict, com_dict, new_core_dict, mountain_
             if dist_2 < dist_1:
                 com_dict_temp[center_mountain[key_mountain]] = com_dict[key_center]
     com_dict = com_dict_temp
+    com_keys_array = np.array(list(com_dict.keys())).copy()
+    com_values_array = np.array(list(com_dict.values())).copy()
+    np_keys_array = np.array(list(new_peak_dict.keys())).copy()
+    np_values_array = np.array(list(new_peak_dict.values())).copy()
     near_k_1 = 1
     near_k_2 = 1
-    flag = 0
     while len(new_core_dict) > 0:
-        remaining_len = len(new_core_dict)
         if len(new_core_dict) > len(com_dict.keys()):
             for key_center in com_dict.keys():
                 if len(new_core_dict) > 0:
-                    distance = Dists_Array([com_dict[key_center]], list(new_peak_dict.values()))
+                    distance = Dists_Array([com_dict[key_center]], np_values_array)
                     distance_index_sort = np.argsort(distance[0])
-                    npd_sort = np.array(list(new_peak_dict.keys()))[distance_index_sort]
+                    npd_sort = np_keys_array[distance_index_sort]
                     key_peak_record = npd_sort[:near_k_2]
-                    Delect(new_peak_dict, new_core_dict, com_dict, core_dict_center, key_peak_record, near_k_2,
-                           origin_data)
+                    del_key_peak_ids = Delect(new_peak_dict, new_core_dict, com_keys_array,
+                                              com_values_array, \
+                                              core_dict_center, key_peak_record, near_k_2, origin_data)
+                    real_del_ids = distance_index_sort[del_key_peak_ids]
+                    real_del_ids = sorted(real_del_ids, reverse=True)
+                    for real_del_id in real_del_ids:
+                        np_keys_array = np.delete(np_keys_array, real_del_id, axis=0)
+                        np_values_array = np.delete(np_values_array, real_del_id, axis=0)
         else:
             key_peak_record = np.array(list(new_peak_dict.keys()))
-            Delect(new_peak_dict, new_core_dict, com_dict, core_dict_center, key_peak_record, near_k_1, origin_data)
-
-        if remaining_len == len(new_core_dict):
-            if remaining_len == remaining_len:
-                #                 print('Remaining Length:',remaining_len)
-                break
-            flag = remaining_len
+            del_key_peak_ids = Delect(new_peak_dict, new_core_dict, com_keys_array, com_values_array, \
+                                      core_dict_center, key_peak_record, near_k_1, origin_data)
         temp_near_k = near_k_2
         near_k_2 = near_k_1
         near_k_1 += temp_near_k
+        if near_k_2 > 8:
+            near_k_2 = temp_near_k
     return com_dict_temp, core_dict_center
+
 
 def Get_CP_Dict(rc_dict,mountain_array,mountain_dict,peak_dict,region_mp_dict,origin_data):
     core_id = 0
@@ -362,6 +366,7 @@ def Get_CP_Dict(rc_dict,mountain_array,mountain_dict,peak_dict,region_mp_dict,or
             com_dict_record[key_center] = com_dict_temp[key_center]
             core_dict_record[key_center] = core_dict_center[key_center]
     return com_dict_record,core_dict_record
+
 
 def Get_DV(box_data,box_center):
     #2D

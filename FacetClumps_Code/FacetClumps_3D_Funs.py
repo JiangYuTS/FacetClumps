@@ -547,6 +547,12 @@ def DID_FacetClumps(SRecursionLBV, center_dict, core_dict, origin_data):
     k = 0
     regions_data = np.zeros_like(origin_data,dtype=np.int32)
     data_size = origin_data.shape
+
+    # keys = np.array(list(center_dict.keys()))
+    # argsort = np.argsort(center_dict[keys][:,2])
+    # keys_sorted = keys[argsort]
+    # for key in keys_sorted:
+    
     for key in center_dict.keys():
         core_x = np.array(core_dict[key])[:, 0]
         core_y = np.array(core_dict[key])[:, 1]
