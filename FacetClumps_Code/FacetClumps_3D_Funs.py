@@ -143,15 +143,65 @@ def Calculate_Eig(eigenvalue_arrays, convs, region):
     return eigenvalue_arrays
 
 
+# def Get_Lable(convs, region, eigenvalue_arrays, bins, keig_bins):
+#     times = 2
+#     conv_gx = convs[0]
+#     conv_gy = convs[1]
+#     conv_gz = convs[2]
+#     coords = (region[:, 0], region[:, 1], region[:, 2])
+#     number_ex, eigs_x = np.histogram(eigenvalue_arrays[0][coords], bins=bins)
+#     number_ey, eigs_y = np.histogram(eigenvalue_arrays[1][coords], bins=bins)
+#     number_ez, eigs_z = np.histogram(eigenvalue_arrays[2][coords], bins=bins)
+#     eig_x = eigs_x[bins + keig_bins]
+#     eig_y = eigs_y[bins + keig_bins]
+#     eig_z = eigs_z[bins + keig_bins]
+#     x_line = convs[0][region[:, 0], region[:, 1], region[:, 2]]
+#     y_line = convs[1][region[:, 0], region[:, 1], region[:, 2]]
+#     z_line = convs[2][region[:, 0], region[:, 1], region[:, 2]]
+#     gra_x_min = -times * np.std(x_line)
+#     gra_x_max = times * np.std(x_line)
+#     gra_y_min = -times * np.std(y_line)
+#     gra_y_max = times * np.std(y_line)
+#     gra_z_min = -times * np.std(z_line)
+#     gra_z_max = times * np.std(z_line)
+#     logic_e_0 = eigenvalue_arrays[0][region[:, 0], region[:, 1], region[:, 2]] < eig_x
+#     logic_e_1 = eigenvalue_arrays[1][region[:, 0], region[:, 1], region[:, 2]] < eig_y
+#     logic_e_2 = eigenvalue_arrays[2][region[:, 0], region[:, 1], region[:, 2]] < eig_z
+#     logic_gx = np.logical_and(conv_gx[region[:, 0], region[:, 1], region[:, 2]] > gra_x_min,
+#                               conv_gx[region[:, 0], region[:, 1], region[:, 2]] < gra_x_max)
+#     logic_gy = np.logical_and(conv_gy[region[:, 0], region[:, 1], region[:, 2]] > gra_y_min,
+#                               conv_gy[region[:, 0], region[:, 1], region[:, 2]] < gra_y_max)
+#     logic_gz = np.logical_and(conv_gz[region[:, 0], region[:, 1], region[:, 2]] > gra_z_min,
+#                               conv_gz[region[:, 0], region[:, 1], region[:, 2]] < gra_z_max)
+#     logic_e = np.logical_and(logic_e_0, np.logical_and(logic_e_1, logic_e_2))
+#     logic_g = np.logical_or(logic_gx, np.logical_or(logic_gy, logic_gz))
+#     logic_e_and_g = np.logical_and(logic_e, logic_g)
+#     new_region = region[logic_e_and_g]
+#     return new_region
+
+
 def Get_Lable(convs, region, eigenvalue_arrays, bins, keig_bins):
     times = 2
     conv_gx = convs[0]
     conv_gy = convs[1]
     conv_gz = convs[2]
     coords = (region[:, 0], region[:, 1], region[:, 2])
-    number_ex, eigs_x = np.histogram(eigenvalue_arrays[0][coords], bins=bins)
-    number_ey, eigs_y = np.histogram(eigenvalue_arrays[1][coords], bins=bins)
-    number_ez, eigs_z = np.histogram(eigenvalue_arrays[2][coords], bins=bins)
+    # number_ex, eigs_x = np.histogram(eigenvalue_arrays[0][coords], bins=bins)
+    offset = eigenvalue_arrays[0][coords].min()
+    eigenvalue_shifted = eigenvalue_arrays[0][coords] - offset
+    number_ex, eigs_x = np.histogram(eigenvalue_shifted, bins=bins)
+    eigs_x = eigs_x + offset
+    # number_ey, eigs_y = np.histogram(eigenvalue_arrays[1][coords], bins=bins)
+    offset = eigenvalue_arrays[1][coords].min()
+    eigenvalue_shifted = eigenvalue_arrays[0][coords] - offset
+    number_ey, eigs_y = np.histogram(eigenvalue_shifted, bins=bins)
+    eigs_y = eigs_y + offset
+    # number_ez, eigs_z = np.histogram(eigenvalue_arrays[2][coords], bins=bins)
+    offset = eigenvalue_arrays[2][coords].min()
+    eigenvalue_shifted = eigenvalue_arrays[0][coords] - offset
+    number_ez, eigs_z = np.histogram(eigenvalue_shifted, bins=bins)
+    eigs_z = eigs_z + offset
+    
     eig_x = eigs_x[bins + keig_bins]
     eig_y = eigs_y[bins + keig_bins]
     eig_z = eigs_z[bins + keig_bins]

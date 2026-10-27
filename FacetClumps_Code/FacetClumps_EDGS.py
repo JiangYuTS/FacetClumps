@@ -15,6 +15,13 @@ from FacetClumps.Cal_Tables_From_Mask_Funs import Cal_Tables_From_Mask as DF_Fac
 # ============================================================
 
 
+def Save_Fits(data,data_header,file_name):
+    hdu_sub = fits.PrimaryHDU()
+    hdu_sub.data = data
+    hdu_sub.header = data_header
+    hdu_sub.writeto(file_name, overwrite=True)
+    
+
 def Cal_SRs_List(RMS, Threshold, file_name):
     """
     Generate sub-region (SR) candidates from a 3D FITS data cube.
@@ -240,7 +247,7 @@ if __name__ == '__main__':
         os.mkdir(save_folder)
 
     # ============================================================
-    # Method 1: detection in S/N normalized cube
+    # Way 1: detection in S/N normalized cube
     # ============================================================
     srs_list, origin_data_T = Cal_SRs_List_SN(
         RMS, Threshold, file_name, file_rms_name
